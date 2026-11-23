@@ -1,0 +1,118 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>The Spread of Religion, Every Year (1500 BC – 2025) · interactive map</title>
+<meta name="description" content="The largest religion in each place, every year from 1500 BC to 2025. Drag through the years or press play.">
+<style>
+@font-face { font-family: "Inter"; font-weight: 500; font-display: block; src: url(fonts/Inter-Medium.woff) format("woff"); }
+@font-face { font-family: "Inter"; font-weight: 600; font-display: block; src: url(fonts/Inter-SemiBold.woff) format("woff"); }
+@font-face { font-family: "Inter"; font-weight: 700; font-display: block; src: url(fonts/Inter-Bold.woff) format("woff"); }
+@font-face { font-family: "Inter"; font-weight: 800; font-display: block; src: url(fonts/Inter-ExtraBold.woff) format("woff"); }
+@font-face { font-family: "Inter"; font-weight: 900; font-display: block; src: url(fonts/Inter-Black.woff) format("woff"); }
+:root {
+  --ink: #16202c; --soft: #5f6874; --panel: #efede9; --edge: rgba(22, 32, 44, 0.16);
+  --accent: #8a6d1f; --sea: #d6e2ee; --page: #e7e9ec;
+}
+* { box-sizing: border-box; }
+html, body { margin: 0; background: var(--page); color: var(--ink); font-family: "Inter", system-ui, sans-serif; }
+main { max-width: 1680px; margin: 0 auto; padding: 18px 20px 28px; }
+header { display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 16px; margin-bottom: 12px; }
+h1 { font-size: 24px; font-weight: 900; letter-spacing: -0.01em; margin: 0; }
+.sub { color: var(--soft); font-weight: 600; font-size: 15px; }
+#stage {
+  position: relative; width: 100%; aspect-ratio: 16 / 9; background: var(--sea); border-radius: 10px;
+  overflow: hidden; border: 1px solid var(--edge);
+}
+#stage canvas { display: block; }
+#loading {
+  position: absolute; inset: 0; display: grid; place-items: center; z-index: 2; background: var(--sea);
+  color: var(--soft); font-weight: 800; font-size: 18px; letter-spacing: 0.02em;
+}
+#loading[hidden] { display: none; }
+.controls {
+  display: flex; flex-wrap: wrap; align-items: center; gap: 10px 18px; margin-top: 12px; padding: 12px 16px;
+  background: var(--panel); border: 1px solid var(--edge); border-radius: 10px;
+}
+.slider { display: flex; align-items: center; gap: 14px; flex: 1 1 420px; min-width: 260px; }
+input[type="range"] { flex: 1; accent-color: var(--accent); height: 28px; cursor: pointer; }
+.year { font-weight: 900; font-size: 24px; font-variant-numeric: tabular-nums; min-width: 108px; text-align: right; }
+button, select {
+  font: inherit; font-weight: 800; font-size: 15px; color: var(--ink); background: #fff;
+  border: 1px solid var(--edge); border-radius: 8px; padding: 8px 14px; cursor: pointer;
+}
+button#play { min-width: 92px; background: var(--ink); color: #fff; border-color: var(--ink); }
+button:focus-visible, select:focus-visible, input:focus-visible { outline: 3px solid var(--accent); outline-offset: 2px; }
+label { font-weight: 700; font-size: 14px; color: var(--soft); display: inline-flex; align-items: center; gap: 8px; }
+.links { font-size: 14px; font-weight: 700; }
+.links a { color: var(--ink); }
+footer { margin-top: 16px; font-size: 13px; line-height: 1.6; color: var(--soft); max-width: 1100px; }
+footer p { margin: 0 0 6px; }
+footer a { color: var(--ink); font-weight: 700; }
+</style>
+</head>
+<body>
+<main>
+  <header>
+    <h1>The Spread of Religion, Every Year</h1>
+    <span class="sub">The largest religion in each place, 1500 BC – 2025</span>
+  </header>
+
+  <div id="stage"><div id="loading">Loading the map…</div></div>
+
+  <div class="controls" role="group" aria-label="Map controls">
+    <button id="play" type="button">Play</button>
+    <div class="slider">
+      <input id="year" type="range" min="-1499" max="2025" step="1" value="2025" aria-label="Year">
+      <span class="year" id="ylab" aria-live="polite">2025</span>
+    </div>
+    <label>Speed
+      <select id="speed">
+        <option value="film">As in the film</option>
+        <option value="10">10 years a second</option>
+        <option value="30" selected>30 years a second</option>
+        <option value="100">100 years a second</option>
+      </select>
+    </label>
+    <label>View
+      <select id="view">
+        <option value="film">Follow the film</option>
+        <option value="world">Whole world</option>
+      </select>
+    </label>
+    <label>Names
+      <select id="names">
+        <option value="1">Shown</option>
+        <option value="0">Hidden</option>
+      </select>
+    </label>
+    <label>Detail
+      <select id="detail">
+        <option value="std">Standard</option>
+        <option value="sharp">Sharp (slower)</option>
+      </select>
+    </label>
+  </div>
+
+  <footer>
+    <p>Each place is coloured by its largest religion; hatched shapes are communities, not majorities, and striped
+      areas are two religions within a few points of each other. Before 1900 the panel on the right estimates how many
+      people lived where each religion was the largest; from 1900 it shows estimated followers.</p>
+    <p>Sources: every date and place on the map comes from the works listed in
+      <a href="https://github.com/Fansist/religion-map/blob/main/SOURCES.md">SOURCES.md</a>.
+      Base map and towns: Natural Earth (public domain). People before 1900: Our World in Data (HYDE 3.3 and
+      Gapminder, CC BY 4.0; UN World Population Prospects, CC BY 3.0 IGO). Followers: Rodney Stark (AD 40–350); Center for the Study of Global
+      Christianity (1900–2025). Typeface: Inter (SIL Open Font License).</p>
+    <p class="links">Keyboard: Space plays or pauses; ← and → step a year. The address keeps the year and view, so a
+      link opens the same map.</p>
+  </footer>
+</main>
+
+<script src="data/film.js"></script>
+<script src="data/land.js"></script>
+<script src="data/prov.js"></script>
+<script src="app.js"></script>
+<script type="module" src="bundle.js"></script>
+</body>
+</html>
