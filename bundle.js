@@ -15,6 +15,7 @@ var FULL = qp.get("full") === "1";
 var NOMIN = qp.get("nomin") === "1";
 var NOLAB = qp.get("nolab") === "1";
 var LX1 = Number(qp.get("lx1") || 1e9);
+var AVOID = (qp.get("avoid") || "").split(";").filter(Boolean).map((b) => b.split(",").map(Number));
 var FPS = RL.fps;
 var HUD = qp.get("hud") !== "0";
 var Q = 2e4;
@@ -520,7 +521,17 @@ var HOOK = IS_SHORT ? 0 : Number(RL.hook || 0);
 var HOOK_YEARS = RL.hookYear || [];
 var HOOK_FADE = 0.6;
 var mapYearAt = (t) => t < HOOK && HOOK_YEARS.length ? HOOK_YEARS[clamp(Math.round(t * FPS), 0, HOOK_YEARS.length - 1)] : yearAt(t);
-var hookAlpha = (t) => !HOOK || t >= HOOK + HOOK_FADE ? 1 : t < HOOK ? 0 : smooth((t - HOOK) / HOOK_FADE);
+var REW = IS_SHORT ? [0, 0] : RL.hookRewind || [0, 0];
+var hookAlpha = (t) => {
+  if (!HOOK) return 1;
+  if (REW[1] > 0) {
+    if (t < REW[0]) return 1;
+    if (t < REW[0] + 0.4) return 1 - smooth((t - REW[0]) / 0.4);
+    if (t < PREVIEW) return 0;
+    return t >= PREVIEW + 0.5 ? 1 : smooth((t - PREVIEW) / 0.5);
+  }
+  return t >= HOOK + HOOK_FADE ? 1 : t < HOOK ? 0 : smooth((t - HOOK) / HOOK_FADE);
+};
 function trackAt(tr, t) {
   const s = tr[1], sc = tr[2];
   if (sc !== sceneOf(t)) return null;
@@ -568,6 +579,7 @@ function layoutLabels(c, t, cam, avoid = []) {
     if (x0 < MAP_X0 + 4 || x1 > Math.min(LW - 4, LX1) || y0 < MAP_Y0 + 4 || y1 > MAP_Y0 + MAP_H - 4) continue;
     if (out.some((P) => !(x1 < P.x - P.w / 2 - 4 || x0 > P.x + P.w / 2 + 4 || y1 < P.y - P.h / 2 - 3 || y0 > P.y + P.h / 2 + 3))) continue;
     if (avoid.some((B) => !(x1 < B[0] || x0 > B[2] || y1 < B[1] || y0 > B[3]))) continue;
+    if (AVOID.some((B) => !(x1 < B[0] || x0 > B[2] || y1 < B[1] || y0 > B[3]))) continue;
     out.push(L);
   }
   return out;
@@ -702,7 +714,32 @@ function drawCaption(c, kick, body, al, isEvent, dy = 0) {
   lines.slice(0, 3).forEach((ln, i) => c.fillText(ln, BX0, BAND_Y + 158 + dy + i * fs * 1.22));
   c.globalAlpha = 1;
 }
+function drawOpening(c, t) {
+  const s2 = REW[0] + 0.25, s3 = REW[1] + 0.05;
+  const a1 = 1 - smooth((t - REW[0]) / 0.25);
+  const a2 = smooth((t - s2) / 0.3) * (1 - smooth((t - (REW[1] - 0.2)) / 0.25));
+  const a3 = smooth((t - s3) / 0.3) * (1 - smooth((t - (PREVIEW - 0.2)) / 0.2));
+  const now = TXT.hookNow, then = TXT.hookThen;
+  if (a1 > 0.01) drawCaption(c, now[0], now[1], a1, false, 0);
+  if (a2 > 0.01) drawCaption(c, then[0], then[1], a2, false, (1 - smooth((t - s2) / 0.35)) * 10);
+  if (a3 > 0.01) {
+    c.globalAlpha = a3;
+    c.fillStyle = INK;
+    c.textAlign = "left";
+    c.textBaseline = "alphabetic";
+    fitSize(c, TXT.title, BX1 - BX0, 64, 900, 40);
+    c.fillText(TXT.title, BX0, BAND_Y + 132);
+    setFont(c, 34, 700);
+    c.fillStyle = INK_SOFT;
+    c.fillText(TXT.subtitle + " \xB7 " + TXT.tagline, BX0, BAND_Y + 196);
+    c.globalAlpha = 1;
+  }
+}
 function drawWords(c, t) {
+  if (t < PREVIEW && REW[1] > 0 && TXT.hookNow) {
+    drawOpening(c, t);
+    return;
+  }
   if (t < PREVIEW) {
     c.fillStyle = INK;
     c.textAlign = "left";
@@ -1003,6 +1040,7 @@ function drawPanel(c, t) {
       al = smooth((t - T) / F);
     }
   }
+  al *= hookAlpha(t);
   if (al <= 0.01) return;
   c.globalAlpha = al;
   if (mode === "key") drawKey(c, t, y);
